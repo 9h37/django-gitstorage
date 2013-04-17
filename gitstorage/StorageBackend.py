@@ -1,4 +1,14 @@
 # -*- coding: utf-8 -*-
+"""
+.. module:: gitstorage.StorageBackend
+    :platform: Unix, Windows
+    :synopsis: Django Storage backend built on top of pygit2
+
+.. moduleauthor:: David Delassus <david.delassus@9h37.fr>
+
+
+"""
+
 
 from django.core.files.storage import Storage
 from django.core.files import File
@@ -10,10 +20,15 @@ from pygit2 import GIT_STATUS_WT_DELETED, GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_
 import os
 
 class GitStorage(Storage):
-    """ Git file storage backend """
+    """ Git file storage backend. """
 
     def __init__(self, path):
-        """ Initialize repository """
+        """
+            Initialize repository.
+
+            :param path: Absolute path to the existing Git repository.
+            :type path: str
+        """
 
         super(GitStorage, self).__init__()
 
@@ -23,19 +38,32 @@ class GitStorage(Storage):
 
     @classmethod
     def create_storage(cls, path):
-        """ Create repository, and return GitStorage object on it """
+        """
+            Create repository, and return GitStorage object on it
+
+            :param path: Absolute path to the Git repository to create.
+            :type path: str
+            :returns: GitStorage
+        """
 
         repo = init_repository(path)
 
         return cls(path)
 
     def commit(self, user, message):
-        """ Create a commit """
+        """
+            Save previous changes in a new commit.
+
+            :param user: The commit author/committer.
+            :type user: django.contrib.auth.models.User
+        """
+
+        # Refresh index before committing
+        index = self.repo.index
+        index.read()
 
         # Check the status of the repository
         status = self.repo.status()
-        index = self.repo.index
-        index.read()
 
         for filename, flags in status.items():
             # the file was deleted
@@ -67,23 +95,31 @@ class GitStorage(Storage):
             [self.repo.head.oid]
         )
 
+        # Write changes to disk
         index.write()
+        # and refresh index.
         self.index.read()
 
     # Storage API
 
     def exists(self, path):
         """
-            Returns True if a file referenced by the given name already exists in
-            the storage system, or False if the name is available for a new file.
+            Check if ``path`` exists in the Git repository.
+
+            :param path: Path within the repository of the file to check.
+            :type param: str
+            :returns: True if the file exists, False if the name is available for a new file.
         """
 
         return path in self.index
 
     def listdir(self, path=None):
         """
-            Lists the contents of the specified path, returning a 2-tuple of
-            lists; the first item being directories, the second item being files. 
+            Lists the contents of the specified path.
+
+            :param path: Path of the directory to list (or None to list the root).
+            :type path: str or None
+            :returns: a 2-tuple of lists; the first item being directories, the second item being files. 
         """
 
         abspath = os.path.join(self.repo.workdir, path) if path else self.repo.workdir
@@ -102,8 +138,13 @@ class GitStorage(Storage):
 
     def open(self, name, mode='rb'):
         """
-            Opens the file given by name. Note that although the returned file is
-            guaranteed to be a File object, it might actually be some subclass.
+            Opens the file given by name.
+
+            :param name: Name of the file to open.
+            :type name: str
+            :param mode: Flags for openning the file (see builtin ``open`` function).
+            :type mode: str
+            :returns: django.core.files.File
         """
 
         abspath = os.path.join(self.repo.workdir, name)
@@ -116,8 +157,12 @@ class GitStorage(Storage):
 
     def path(self, name):
         """
-            The local filesystem path where the file can be opened using
-            Python’s standard open().
+            Return the absolute path of the file ``name`` within the repository.
+
+            :param name: Name of the file within the repository.
+            :type name: str
+            :returns: str
+            :raises: IOError
         """
 
         if not self.exists(name):
@@ -130,12 +175,15 @@ class GitStorage(Storage):
     def save(self, name, content):
         """
             Saves a new file using the storage system, preferably with the name
-            specified. If there already exists a file with this name name, the
+            specified. If there already exists a file with this name, the
             storage system may modify the filename as necessary to get a unique
             name. The actual name of the stored file will be returned.
 
-            The content argument must be an instance of django.core.files.File
-            or of a subclass of File.
+            :param name: Name of the new file within the repository.
+            :type name: str
+            :param content: Content to save.
+            :type content: django.core.files.File
+            :returns: str
         """
 
         new_name = self.get_available_name(name)
@@ -153,6 +201,10 @@ class GitStorage(Storage):
     def delete(self, name):
         """
             Deletes the file referenced by name.
+
+            :param name: Name of the file within the repository to delete
+            :type name: str
+            :raises: IOError
         """
 
         if not self.exists(name):
