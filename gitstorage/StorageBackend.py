@@ -13,11 +13,26 @@
 from django.core.files.storage import Storage
 from django.core.files import File
 
-from pygit2 import Repository, init_repository, Signature
+from pygit2 import Repository, init_repository, Signature, GitError
 from pygit2 import GIT_STATUS_INDEX_DELETED, GIT_STATUS_INDEX_MODIFIED, GIT_STATUS_INDEX_NEW
 from pygit2 import GIT_STATUS_WT_DELETED, GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_NEW
 
 import os
+
+
+class GitFile(File):
+    """ Sub-class of File object to handle UTF-8 data. """
+
+    def write(self, data):
+        """
+            Write UTF-8 data to file.
+
+            :param data: Data to write
+            :type data: unicode
+        """
+
+        super(GitFile, self).write(data.encode('utf-8'))
+
 
 class GitStorage(Storage):
     """ Git file storage backend. """
@@ -88,11 +103,17 @@ class GitStorage(Storage):
         )
         committer = author
 
+        try:
+            parents = [self.repo.head.oid]
+
+        except GitError:
+            parents = []
+
         self.repo.create_commit(
-            'HEAD',
+            'refs/heads/master',
             author, committer, message,
             treeid,
-            [self.repo.head.oid]
+            parents
         )
 
         # Write changes to disk
@@ -128,11 +149,14 @@ class GitStorage(Storage):
         files = []
 
         for e in os.listdir(abspath):
-            if os.path.isdir(e) and e != '.git':
-                dirs.append(e)
+            entry_fullpath = os.path.join(abspath, e)
+
+            if os.path.isdir(entry_fullpath):
+                if e != '.git':
+                    dirs.append(e.decode('utf-8'))
 
             else:
-                files.append(e)
+                files.append(e.decode('utf-8'))
 
         return (dirs, files)
 
@@ -144,7 +168,7 @@ class GitStorage(Storage):
             :type name: str
             :param mode: Flags for openning the file (see builtin ``open`` function).
             :type mode: str
-            :returns: django.core.files.File
+            :returns: GitFile
         """
 
         abspath = os.path.join(self.repo.workdir, name)
@@ -153,7 +177,7 @@ class GitStorage(Storage):
         if 'w' in mode and not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        return File(open(abspath, mode))
+        return GitFile(open(abspath, mode))
 
     def path(self, name):
         """
@@ -166,11 +190,11 @@ class GitStorage(Storage):
         """
 
         if not self.exists(name):
-            raise IOError, u"{0}: Not found in repository".format(name)
+            raise IOError(u"{0}: Not found in repository".format(name))
 
         e = self.index[name]
 
-        return os.path.join(self.repo.workdir, e.path)
+        return os.path.join(self.repo.workdir, e.path).decode('utf-8')
 
     def save(self, name, content):
         """
@@ -208,7 +232,7 @@ class GitStorage(Storage):
         """
 
         if not self.exists(name):
-            raise IOError, u"{0}: Not found in repository".format(name)
+            raise IOError(u"{0}: Not found in repository".format(name))
 
         abspath = os.path.join(self.repo.workdir, name)
         os.remove(abspath)
