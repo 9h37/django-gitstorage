@@ -17,6 +17,7 @@ from pygit2 import Repository, init_repository, Signature, GitError
 from pygit2 import GIT_STATUS_INDEX_DELETED, GIT_STATUS_INDEX_MODIFIED, GIT_STATUS_INDEX_NEW
 from pygit2 import GIT_STATUS_WT_DELETED, GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_NEW
 
+import datetime
 import os
 
 
@@ -123,6 +124,78 @@ class GitStorage(Storage):
 
     # Storage API
 
+    def accessed_time(self, name):
+        """
+            Get last accessed time of a file.
+
+            :param name: File name within the repository.
+            :type name: unicode
+            :returns: datetime
+            :raises: IOError
+        """
+
+        if not self.exists(name):
+            raise IOError(u"{0}: Not found in repository".format(name))
+
+        abspath = os.path.join(self.repo.workdir, path) 
+        stats = os.stat(abspath)
+
+        return datetime.datetime.fromtimestamp(stats.st_atime)
+
+    def created_time(self, name):
+        """
+            Get creation time of a file.
+
+            :param name: File name within the repository.
+            :type name: unicode
+            :returns: datetime
+            :raises: IOError
+        """
+
+        if not self.exists(name):
+            raise IOError(u"{0}: Not found in repository".format(name))
+
+        abspath = os.path.join(self.repo.workdir, path) 
+        stats = os.stat(abspath)
+
+        return datetime.datetime.fromtimestamp(stats.st_ctime)
+
+    def modified_time(self, name):
+        """
+            Get last modified time of a file.
+
+            :param name: File name within the repository.
+            :type name: unicode
+            :returns: datetime
+            :raises: IOError
+        """
+
+        if not self.exists(name):
+            raise IOError(u"{0}: Not found in repository".format(name))
+
+        abspath = os.path.join(self.repo.workdir, path) 
+        stats = os.stat(abspath)
+
+        return datetime.datetime.fromtimestamp(stats.st_mtime)
+
+    def size(self, name):
+        """
+            Get file's size.
+
+            :param name: File name within the repository.
+            :type name: unicode
+            :returns: int
+            :raises: IOError
+        """
+
+        if not self.exists(name):
+            raise IOError(u"{0}: Not found in repository".format(name))
+
+        e = self.index[name]
+        blob = self.repo[e.oid]
+
+        return blob.size
+
     def exists(self, path):
         """
             Check if ``path`` exists in the Git repository.
@@ -139,7 +212,7 @@ class GitStorage(Storage):
             Lists the contents of the specified path.
 
             :param path: Path of the directory to list (or None to list the root).
-            :type path: str or None
+            :type path: unicode or None
             :returns: a 2-tuple of lists; the first item being directories, the second item being files. 
         """
 
@@ -165,7 +238,7 @@ class GitStorage(Storage):
             Opens the file given by name.
 
             :param name: Name of the file to open.
-            :type name: str
+            :type name: unicode
             :param mode: Flags for openning the file (see builtin ``open`` function).
             :type mode: str
             :returns: GitFile
@@ -184,7 +257,7 @@ class GitStorage(Storage):
             Return the absolute path of the file ``name`` within the repository.
 
             :param name: Name of the file within the repository.
-            :type name: str
+            :type name: unicode
             :returns: str
             :raises: IOError
         """
@@ -204,7 +277,7 @@ class GitStorage(Storage):
             name. The actual name of the stored file will be returned.
 
             :param name: Name of the new file within the repository.
-            :type name: str
+            :type name: unicode
             :param content: Content to save.
             :type content: django.core.files.File
             :returns: str
@@ -227,7 +300,7 @@ class GitStorage(Storage):
             Deletes the file referenced by name.
 
             :param name: Name of the file within the repository to delete
-            :type name: str
+            :type name: unicode
             :raises: IOError
         """
 
