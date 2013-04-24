@@ -62,7 +62,7 @@ class GitStorage(Storage):
             :returns: GitStorage
         """
 
-        init_repository(path, bare=False)
+        init_repository(path, False)
 
         return cls(path)
 

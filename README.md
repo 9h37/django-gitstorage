@@ -5,7 +5,7 @@ Django Storage backend built on top of pygit2.
 
 ## Usage
 
-    :::python
+    #!python
     from gitstorage.StorageBackend import GitStorage
     from django.contrib.auth.models import User
     
