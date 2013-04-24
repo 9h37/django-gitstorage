@@ -16,6 +16,7 @@ from django.core.files import File
 from pygit2 import Repository, init_repository, Signature, GitError
 from pygit2 import GIT_STATUS_INDEX_DELETED, GIT_STATUS_INDEX_MODIFIED, GIT_STATUS_INDEX_NEW
 from pygit2 import GIT_STATUS_WT_DELETED, GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_NEW
+from pygit2 import GIT_SORT_TIME
 
 import datetime
 import os
@@ -110,7 +111,7 @@ class GitStorage(Storage):
         except GitError:
             parents = []
 
-        self.repo.create_commit(
+        commit = self.repo.create_commit(
             'refs/heads/master',
             author, committer, message,
             treeid,
@@ -121,6 +122,41 @@ class GitStorage(Storage):
         index.write()
         # and refresh index.
         self.index.read()
+
+        # Return commit object
+        return self.repo[commit]
+
+    def log(self, name=None):
+        """
+            Get history of the repository, or of a file if name is not None.
+
+            :param name: File name within the repository.
+            :type name: unicode or None
+            :returns: list of pygit2.Commit
+        """
+
+        if not name:
+            return [commit for commit in self.repo.walk(self.repo.head.oid, GIT_SORT_TIME)]
+
+        else:
+            commits = []
+
+            # For each commits
+            for commit in self.repo.walk(self.repo.head.oid, GIT_SORT_TIME):
+                # Check the presence of the file in the tree
+                try:
+                    commit.tree[name]
+
+                    # no error raised, it means the entry exists, so add the
+                    # commit to the list
+                    commits.append(commit)
+
+                # If the file is not in the tree, then it raises a KeyError,
+                # so, just ignore it.
+                except KeyError:
+                    pass
+
+            return commits
 
     # Storage API
 

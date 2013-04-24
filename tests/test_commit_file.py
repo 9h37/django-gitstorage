@@ -16,11 +16,18 @@ class TestUser(object):
 class TestCommitFile(unittest.TestCase):
 
     def setUp(self):
+        """
+            Create repository, and commit test_é.txt file.
+        """
+
         self.st = GitStorage.create_storage('test-commit-file-git')
         self.user = TestUser()
 
     def tearDown(self):
-        # remove repository
+        """
+            Remove repository.
+        """
+
         for root, dirs, files in os.walk(self.st.repo.workdir, topdown=False):
             for name in files:
                 os.remove(os.path.join(root, name))
@@ -31,6 +38,10 @@ class TestCommitFile(unittest.TestCase):
         os.rmdir(self.st.repo.workdir)
 
     def test_commit_open(self):
+        """
+            Test writing a commit by saving new content via open().
+        """
+
         f = self.st.open(u'test_é.txt', 'w')
 
         self.assertIsInstance(f, GitFile)
@@ -44,6 +55,10 @@ class TestCommitFile(unittest.TestCase):
         self.st.commit(self.user, u'test commit é')
 
     def test_commit_save(self):
+        """
+            Test writing a commit by saving new content via save().
+        """
+
         f = ContentFile(u'héhé'.encode('utf-8'))
 
         self.st.save(u'test_é.txt', f)

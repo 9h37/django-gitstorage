@@ -16,6 +16,10 @@ class TestUser(object):
 class TestFileExists(unittest.TestCase):
 
     def setUp(self):
+        """
+            Create repository, and commit test_é.txt file.
+        """
+
         self.st = GitStorage.create_storage('test-file-exists-git')
         self.user = TestUser()
 
@@ -24,7 +28,10 @@ class TestFileExists(unittest.TestCase):
         self.st.commit(self.user, u'test commit é')
 
     def tearDown(self):
-        # remove repository
+        """
+            Remove repository.
+        """
+
         for root, dirs, files in os.walk(self.st.repo.workdir, topdown=False):
             for name in files:
                 os.remove(os.path.join(root, name))
@@ -35,9 +42,17 @@ class TestFileExists(unittest.TestCase):
         os.rmdir(self.st.repo.workdir)
 
     def test_file_exists(self):
+        """
+            Make sure the file test_é.txt exists.
+        """
+
         self.assertTrue(self.st.exists(u'test_é.txt'))
 
     def test_file_do_not_exists(self):
+        """
+            Make sure the file test_oups.txt doesn't exist.
+        """
+
         self.assertFalse(self.st.exists(u'test_oups.txt'))
 
 
