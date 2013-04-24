@@ -20,6 +20,7 @@ from pygit2 import GIT_SORT_TIME
 
 import datetime
 import os
+import re
 
 
 class GitFile(File):
@@ -236,6 +237,44 @@ class GitStorage(Storage):
         d = c1.tree.diff(c2.tree)
 
         return d.patch
+
+    def search(self, pattern, exclude=None):
+        """
+            Search pattern in GIT repository.
+
+            :param pattern: Pattern to search.
+            :type pattern: unicode
+            :param exclude: Exclude some files from the search results
+            :type exclude: regex
+            :returns: list of tuple containing the filename and the list of matched lines.
+        """
+
+        entries = []
+
+        self.index.read()
+
+        # For each files in the index
+        for ientry in self.index:
+            # If the filename match the exclude_file regex, then ignore it
+            if exclude and re.match(exclude, ientry.path.decode('utf-8')):
+                continue
+
+            # Get the associated blob
+            blob = self.repo[ientry.oid]
+
+            # Create entry
+            entry = (ientry.path.decode('utf-8'), [])
+
+            # Add matched lines to the entry
+            for line in blob.data.decode('utf-8').splitlines():
+                if pattern in line:
+                    entry[1].append(line)
+
+            # If the entry has no matched lines, then ignore
+            if entry[1]:
+                entries.append(entry)
+
+        return entries
 
     # Storage API
 
