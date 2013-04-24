@@ -9,7 +9,10 @@ from gitstorage.StorageBackend import GitStorage
 class TestCreateStorage(unittest.TestCase):
 
     def tearDown(self):
-        # remove repository
+        """
+            Remove repository.
+        """
+
         for root, dirs, files in os.walk('test-create-storage-git', topdown=False):
             for name in files:
                 os.remove(os.path.join(root, name))
@@ -20,6 +23,12 @@ class TestCreateStorage(unittest.TestCase):
         os.rmdir('test-create-storage-git')
 
     def test_create_repository(self):
+        """
+            Try to create a repository, and check the new folder exists.
+            Try it via create_storage() and GitStorage(), then make sure both
+            repository points to the same folder.
+        """
+
         r = GitStorage.create_storage('test-create-storage-git')
 
         self.assertIsNotNone(r.repo.workdir)

@@ -16,9 +16,11 @@ from django.core.files import File
 from pygit2 import Repository, init_repository, Signature, GitError
 from pygit2 import GIT_STATUS_INDEX_DELETED, GIT_STATUS_INDEX_MODIFIED, GIT_STATUS_INDEX_NEW
 from pygit2 import GIT_STATUS_WT_DELETED, GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_NEW
+from pygit2 import GIT_SORT_TIME
 
 import datetime
 import os
+import re
 
 
 class GitFile(File):
@@ -110,7 +112,7 @@ class GitStorage(Storage):
         except GitError:
             parents = []
 
-        self.repo.create_commit(
+        commit = self.repo.create_commit(
             'refs/heads/master',
             author, committer, message,
             treeid,
@@ -121,6 +123,158 @@ class GitStorage(Storage):
         index.write()
         # and refresh index.
         self.index.read()
+
+        # Return commit object
+        return self.repo[commit]
+
+    def log(self, name=None, limit=10):
+        """
+            Get history of the repository, or of a file if name is not None.
+
+            :param name: File name within the repository.
+            :type name: unicode or None
+            :param limit: Maximal number of commits to get (default: 10), use a negative number to get all.
+            :type limit: int
+            :returns: list of pygit2.Commit
+        """
+
+        commits = []
+
+        if not name:
+            # Look for `limit` commits
+            for commit in self.repo.walk(self.repo.head.oid, GIT_SORT_TIME):
+                commits.append(commit)
+
+                limit = limit - 1
+
+                if limit == 0:
+                    break
+
+            return commits
+
+        else:
+            # For each commits
+            for commit in self.repo.walk(self.repo.head.oid, GIT_SORT_TIME):
+                # Check the presence of the file in the tree
+                try:
+                    commit.tree[name]
+
+                    # no error raised, it means the entry exists, so add the
+                    # commit to the list
+                    commits.append(commit)
+
+                    limit = limit - 1
+
+                    if limit == 0:
+                        break
+
+                # If the file is not in the tree, then it raises a KeyError,
+                # so, just ignore it.
+                except KeyError:
+                    pass
+
+        return commits
+
+    def diffs(self, limit=10):
+        """
+            Get diffs between commits.
+
+            Return the following dict :
+
+                {"diffs": [
+                    {
+                        "msg": unicode(<commit message>),
+                        "date": datetime.fromtimestamp(<commit date>),
+                        "author": unicode(<author name>),
+                        "sha": unicode(<commit SHA>),
+                        "parent_sha": unicode(<parent commit SHA>), # optional
+                    },
+                    # ...
+                ]}
+
+            :param limit: Maximal number of diffs to get (default: 10), use a negative number to get all.
+            :type limit: int
+            :returns: dict
+        """
+
+        commits = self.log(limit=limit)
+
+        diffs = {'diffs': []}
+
+        # For each commit
+        for commit in commits:
+            # Create a JSON object containing informations about the commit
+            diff = {
+                'msg': commit.message,
+                'date': datetime.datetime.fromtimestamp(commit.commit_time),
+                'author': commit.author.name,
+                'sha': commit.hex,
+            }
+
+            if commit.parents:
+                diff['parent_sha'] = commit.parents[0].hex
+
+            # The SHA and parent SHA will be used to get the diff via AJAX.
+
+            diffs['diffs'].append(diff)
+
+        return diffs
+
+    def diff(self, asha, bsha):
+        """
+            Get diff between two commits.
+
+            :param asha: SHA of commit A.
+            :type asha: unicode
+            :param bsha: SHA of commit B.
+            :type bsha: unicode
+            :returns: unicode
+        """
+
+        c1 = self.repo.revparse_single(asha)
+        c2 = self.repo.revparse_single(bsha)
+
+        d = c1.tree.diff(c2.tree)
+
+        return d.patch
+
+    def search(self, pattern, exclude=None):
+        """
+            Search pattern in GIT repository.
+
+            :param pattern: Pattern to search.
+            :type pattern: unicode
+            :param exclude: Exclude some files from the search results
+            :type exclude: regex
+            :returns: list of tuple containing the filename and the list of matched lines.
+        """
+
+        entries = []
+
+        self.index.read()
+
+        # For each files in the index
+        for ientry in self.index:
+            # If the filename match the exclude_file regex, then ignore it
+            if exclude and re.match(exclude, ientry.path.decode('utf-8')):
+                continue
+
+            # Get the associated blob
+            blob = self.repo[ientry.oid]
+
+            # Create entry
+            entry = (ientry.path.decode('utf-8'), [])
+
+            # Add matched lines to the entry
+            for line in blob.data.decode('utf-8').splitlines():
+                if pattern in line:
+                    entry[1].append(line)
+
+            # If the entry has no matched lines, then ignore
+            if entry[1]:
+                entries.append(entry)
+
+        return entries
 
     # Storage API
 
@@ -201,7 +355,7 @@ class GitStorage(Storage):
             Check if ``path`` exists in the Git repository.
 
             :param path: Path within the repository of the file to check.
-            :type param: str
+            :type param: unicode
             :returns: True if the file exists, False if the name is available for a new file.
         """
 

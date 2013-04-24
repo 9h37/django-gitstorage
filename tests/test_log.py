@@ -13,19 +13,19 @@ class TestUser(object):
     email = u'gerard.test@example.com'
 
 
-class TestListdir(unittest.TestCase):
+class TestLog(unittest.TestCase):
 
     def setUp(self):
         """
             Create repository, and commit test_é.txt file.
         """
 
-        self.st = GitStorage.create_storage('test-listdir-git')
+        self.st = GitStorage.create_storage('test-log-git')
         self.user = TestUser()
 
         f = ContentFile(u'héhé'.encode('utf-8'))
         self.st.save(u'test_é.txt', f)
-        self.st.commit(self.user, u'test commit é')
+        self.commit = self.st.commit(self.user, u'test commit é')
 
     def tearDown(self):
         """
@@ -41,18 +41,34 @@ class TestListdir(unittest.TestCase):
 
         os.rmdir(self.st.repo.workdir)
 
-    def test_listdir(self):
+    def test_commit_log(self):
         """
-            Make sure the content of root directory is the following `listdir`.
+            Verify that the commit log of the repository is correct.
         """
 
-        listdir = (
-            [],  # directories
-            [u'test_é.txt'],
-        )
+        real_commits = [self.commit.hex]
+        commits = [commit.hex for commit in self.st.log()]
 
-        self.assertEqual(listdir, self.st.listdir())
+        self.assertEqual(commits, real_commits)
 
+    def test_commit_log_for_file(self):
+        """
+            Verify that the commit log of the file test_é.txt is correct.
+        """
+
+        real_commits = [self.commit.hex]
+        commits = [commit.hex for commit in self.st.log(name=u'test_é.txt')]
+
+        self.assertEqual(commits, real_commits)
+
+    def test_commit_log_limit(self):
+        """
+            Test the limit parameter.
+        """
+
+        commits = self.st.log(limit=1)
+
+        self.assertEqual(len(commits), 1)
 
 if __name__ == '__main__':
     unittest.main()

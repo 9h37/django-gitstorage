@@ -13,19 +13,19 @@ class TestUser(object):
     email = u'gerard.test@example.com'
 
 
-class TestListdir(unittest.TestCase):
+class TestSearch(unittest.TestCase):
 
     def setUp(self):
         """
             Create repository, and commit test_é.txt file.
         """
 
-        self.st = GitStorage.create_storage('test-listdir-git')
+        self.st = GitStorage.create_storage('test-search-git')
         self.user = TestUser()
 
         f = ContentFile(u'héhé'.encode('utf-8'))
         self.st.save(u'test_é.txt', f)
-        self.st.commit(self.user, u'test commit é')
+        self.commit = self.st.commit(self.user, u'test commit é')
 
     def tearDown(self):
         """
@@ -41,18 +41,38 @@ class TestListdir(unittest.TestCase):
 
         os.rmdir(self.st.repo.workdir)
 
-    def test_listdir(self):
+    def test_search(self):
         """
-            Make sure the content of root directory is the following `listdir`.
+            Make sure the search works.
         """
 
-        listdir = (
-            [],  # directories
-            [u'test_é.txt'],
-        )
+        expected = [
+            (u'test_é.txt', [u'héhé'])
+        ]
 
-        self.assertEqual(listdir, self.st.listdir())
+        results = self.st.search(u'hé')
 
+        self.assertEqual(expected, results)
+
+    def test_search_no_results(self):
+        """
+            Make sure we get nothing when there is no match.
+        """
+
+        expected = []
+        results = self.st.search('test')
+
+        self.assertEqual(expected, results)
+
+    def test_search_exclude(self):
+        """
+            Make sure the exclude pattern works.
+        """
+
+        expected = []
+        results = self.st.search(u'hé', exclude=r'^test(.+)')
+
+        self.assertEqual(expected, results)
 
 if __name__ == '__main__':
     unittest.main()
