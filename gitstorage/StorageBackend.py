@@ -62,7 +62,7 @@ class GitStorage(Storage):
             :returns: GitStorage
         """
 
-        repo = init_repository(path)
+        init_repository(path, bare=False)
 
         return cls(path)
 
@@ -137,7 +137,7 @@ class GitStorage(Storage):
         if not self.exists(name):
             raise IOError(u"{0}: Not found in repository".format(name))
 
-        abspath = os.path.join(self.repo.workdir, path) 
+        abspath = os.path.join(self.repo.workdir, name)
         stats = os.stat(abspath)
 
         return datetime.datetime.fromtimestamp(stats.st_atime)
@@ -155,7 +155,7 @@ class GitStorage(Storage):
         if not self.exists(name):
             raise IOError(u"{0}: Not found in repository".format(name))
 
-        abspath = os.path.join(self.repo.workdir, path) 
+        abspath = os.path.join(self.repo.workdir, name)
         stats = os.stat(abspath)
 
         return datetime.datetime.fromtimestamp(stats.st_ctime)
@@ -173,7 +173,7 @@ class GitStorage(Storage):
         if not self.exists(name):
             raise IOError(u"{0}: Not found in repository".format(name))
 
-        abspath = os.path.join(self.repo.workdir, path) 
+        abspath = os.path.join(self.repo.workdir, name)
         stats = os.stat(abspath)
 
         return datetime.datetime.fromtimestamp(stats.st_mtime)
@@ -213,7 +213,7 @@ class GitStorage(Storage):
 
             :param path: Path of the directory to list (or None to list the root).
             :type path: unicode or None
-            :returns: a 2-tuple of lists; the first item being directories, the second item being files. 
+            :returns: a 2-tuple of lists; the first item being directories, the second item being files.
         """
 
         abspath = os.path.join(self.repo.workdir, path) if path else self.repo.workdir
