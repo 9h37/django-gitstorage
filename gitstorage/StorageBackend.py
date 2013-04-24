@@ -126,21 +126,32 @@ class GitStorage(Storage):
         # Return commit object
         return self.repo[commit]
 
-    def log(self, name=None):
+    def log(self, name=None, limit=10):
         """
             Get history of the repository, or of a file if name is not None.
 
             :param name: File name within the repository.
             :type name: unicode or None
+            :param limit: Maximal number of commits to get (default: 10), use a negative number to get all.
+            :type limit: int
             :returns: list of pygit2.Commit
         """
 
+        commits = []
+
         if not name:
-            return [commit for commit in self.repo.walk(self.repo.head.oid, GIT_SORT_TIME)]
+            # Look for `limit` commits
+            for commit in self.repo.walk(self.repo.head.oid, GIT_SORT_TIME):
+                commits.append(commit)
+
+                limit = limit - 1
+
+                if limit == 0:
+                    break
+
+            return commits
 
         else:
-            commits = []
-
             # For each commits
             for commit in self.repo.walk(self.repo.head.oid, GIT_SORT_TIME):
                 # Check the presence of the file in the tree
@@ -151,12 +162,80 @@ class GitStorage(Storage):
                     # commit to the list
                     commits.append(commit)
 
+                    limit = limit - 1
+
+                    if limit == 0:
+                        break
+
                 # If the file is not in the tree, then it raises a KeyError,
                 # so, just ignore it.
                 except KeyError:
                     pass
 
-            return commits
+        return commits
+
+    def diffs(self, limit=10):
+        """
+            Get diffs between commits.
+
+            Return the following dict :
+
+                {"diffs": [
+                    {
+                        "msg": unicode(<commit message>),
+                        "date": datetime.fromtimestamp(<commit date>),
+                        "author": unicode(<author name>),
+                        "sha": unicode(<commit SHA>),
+                        "parent_sha": unicode(<parent commit SHA>), # optional
+                    },
+                    # ...
+                ]}
+
+            :param limit: Maximal number of diffs to get (default: 10), use a negative number to get all.
+            :type limit: int
+            :returns: dict
+        """
+
+        commits = self.log(limit=limit)
+
+        diffs = {'diffs': []}
+
+        # For each commit
+        for commit in commits:
+            # Create a JSON object containing informations about the commit
+            diff = {
+                'msg': commit.message,
+                'date': datetime.datetime.fromtimestamp(commit.commit_time),
+                'author': commit.author.name,
+                'sha': commit.hex,
+            }
+
+            if commit.parents:
+                diff['parent_sha'] = commit.parents[0].hex
+
+            # The SHA and parent SHA will be used to get the diff via AJAX.
+
+            diffs['diffs'].append(diff)
+
+        return diffs
+
+    def diff(self, asha, bsha):
+        """
+            Get diff between two commits.
+
+            :param asha: SHA of commit A.
+            :type asha: unicode
+            :param bsha: SHA of commit B.
+            :type bsha: unicode
+            :returns: unicode
+        """
+
+        c1 = self.repo.revparse_single(asha)
+        c2 = self.repo.revparse_single(bsha)
+
+        d = c1.tree.diff(c2.tree)
+
+        return d.patch
 
     # Storage API
 

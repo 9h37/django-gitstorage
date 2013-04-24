@@ -6,8 +6,6 @@ import os
 from gitstorage.StorageBackend import GitStorage
 from django.core.files.base import ContentFile
 
-from datetime import datetime
-
 
 class TestUser(object):
     first_name = u'Gérard'
@@ -28,9 +26,6 @@ class TestLog(unittest.TestCase):
         f = ContentFile(u'héhé'.encode('utf-8'))
         self.st.save(u'test_é.txt', f)
         self.commit = self.st.commit(self.user, u'test commit é')
-
-        d = datetime.now()
-        self.now = datetime(d.year, d.month, d.day, d.hour, d.minute)
 
     def tearDown(self):
         """
@@ -66,6 +61,14 @@ class TestLog(unittest.TestCase):
 
         self.assertEqual(commits, real_commits)
 
+    def test_commit_log_limit(self):
+        """
+            Test the limit parameter.
+        """
+
+        commits = self.st.log(limit=1)
+
+        self.assertEqual(len(commits), 1)
 
 if __name__ == '__main__':
     unittest.main()
