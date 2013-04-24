@@ -201,7 +201,7 @@ class GitStorage(Storage):
             Check if ``path`` exists in the Git repository.
 
             :param path: Path within the repository of the file to check.
-            :type param: str
+            :type param: unicode
             :returns: True if the file exists, False if the name is available for a new file.
         """
 

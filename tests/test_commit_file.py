@@ -16,7 +16,7 @@ class TestUser(object):
 class TestCommitFile(unittest.TestCase):
 
     def setUp(self):
-        self.st = GitStorage.create_storage('test-create-storage-git')
+        self.st = GitStorage.create_storage('test-commit-file-git')
         self.user = TestUser()
 
     def tearDown(self):

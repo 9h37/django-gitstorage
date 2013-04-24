@@ -16,7 +16,7 @@ class TestUser(object):
 class TestListdir(unittest.TestCase):
 
     def setUp(self):
-        self.st = GitStorage.create_storage('test-create-storage-git')
+        self.st = GitStorage.create_storage('test-listdir-git')
         self.user = TestUser()
 
         f = ContentFile(u'héhé'.encode('utf-8'))
