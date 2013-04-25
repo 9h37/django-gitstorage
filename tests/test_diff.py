@@ -52,16 +52,12 @@ class TestDiff(unittest.TestCase):
             Make sure the diff is correct.
         """
 
-        d = self.st.diff(self.commit1.hex, self.commit2.hex)
+        d = self.st.diff(self.commit1.oid, self.commit2.oid)
 
         patch = u"""diff --git a/test_é_1.txt b/test_é_1.txt
 new file mode 100644
 index 0000000..ffe3c60
---- /dev/null
-+++ b/test_é_1.txt
-@@ -0,0 +1 @@
-+hèhè
-\ No newline at end of file
+Binary files /dev/null and b/test_é_1.txt differ
 """
 
         self.assertEqual(d, patch)
@@ -72,13 +68,13 @@ index 0000000..ffe3c60
         """
 
         c1meta = {
-            'msg': u'test commit é',
+            'msg': u'test commit é\n',
             'author': u'{0} {1}'.format(self.user.first_name, self.user.last_name),
             'sha': self.commit1.hex
         }
 
         c2meta = {
-            'msg': u'test commit è',
+            'msg': u'test commit è\n',
             'author': u'{0} {1}'.format(self.user.first_name, self.user.last_name),
             'sha': self.commit2.hex,
             'parent_sha': self.commit1.hex

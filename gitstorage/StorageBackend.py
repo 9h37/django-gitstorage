@@ -74,6 +74,9 @@ class GitStorage(Storage):
 
             :param user: The commit author/committer.
             :type user: django.contrib.auth.models.User
+            :param message: The commit message.
+            :type message: unicode
+            :returns: pygit2.Commit
         """
 
         # Refresh index before committing
@@ -231,12 +234,12 @@ class GitStorage(Storage):
             :returns: unicode
         """
 
-        c1 = self.repo.revparse_single(asha)
-        c2 = self.repo.revparse_single(bsha)
+        c1 = self.repo[asha]
+        c2 = self.repo[bsha]
 
         d = c1.tree.diff(c2.tree)
 
-        return d.patch
+        return d.patch.decode('utf-8')
 
     def search(self, pattern, exclude=None):
         """
