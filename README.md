@@ -38,3 +38,4 @@ Or to update :
     $ . .venv/bin/activate
     $ cd tests && ./test.sh
 
+[![Build Status](https://travis-ci.org/linkdd/django-gitstorage.png?branch=master)](https://travis-ci.org/linkdd/django-gitstorage)
