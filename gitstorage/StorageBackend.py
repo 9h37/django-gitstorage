@@ -356,6 +356,16 @@ class GitStorage(Storage):
 
             return mimetypes.guess_type(url)[0]
 
+    def walk(self):
+        """
+            Walk through the repository.
+        """
+
+        self.index.read()
+
+        for entry in self.index:
+            yield entry
+
     # Storage API
 
     def accessed_time(self, name):
@@ -439,7 +449,15 @@ class GitStorage(Storage):
             :returns: True if the file exists, False if the name is available for a new file.
         """
 
-        return path in self.index
+        # Try getting the path via the tree
+        try:
+            entry = self.repo.head.tree[path]
+
+            return True
+
+        # If it raises a KeyError, then the path doesn't exist
+        except KeyError:
+            return False
 
     def listdir(self, path=None):
         """
