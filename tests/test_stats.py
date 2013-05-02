@@ -26,7 +26,7 @@ class TestStats(unittest.TestCase):
         self.user = TestUser()
 
         self.f = ContentFile(u'héhé'.encode('utf-8'))
-        self.st.save(u'test_é.txt', self.f)
+        self.st.save(u'test/test_é.txt', self.f)
         self.st.commit(self.user, u'test commit é')
 
         # save current time (without microseconds)
@@ -55,7 +55,7 @@ class TestStats(unittest.TestCase):
             Verify that the last accessed time is correct.
         """
 
-        d = self.st.accessed_time(u'test_é.txt')
+        d = self.st.accessed_time(u'test/test_é.txt')
         d = datetime(d.year, d.month, d.day, d.hour, d.minute)
 
         self.assertEqual(self.now, d)
@@ -65,7 +65,7 @@ class TestStats(unittest.TestCase):
             Verify that the creation time is correct.
         """
 
-        d = self.st.created_time(u'test_é.txt')
+        d = self.st.created_time(u'test/test_é.txt')
         d = datetime(d.year, d.month, d.day, d.hour, d.minute)
 
         self.assertEqual(self.now, d)
@@ -75,7 +75,7 @@ class TestStats(unittest.TestCase):
             Verify that the last modified time is correct.
         """
 
-        d = self.st.modified_time(u'test_é.txt')
+        d = self.st.modified_time(u'test/test_é.txt')
         d = datetime(d.year, d.month, d.day, d.hour, d.minute)
 
         self.assertEqual(self.now, d)
@@ -85,9 +85,24 @@ class TestStats(unittest.TestCase):
             Test that the file size is correct.
         """
 
-        sz = self.st.size(u'test_é.txt')
+        sz = self.st.size(u'test/test_é.txt')
         self.assertEqual(sz, self.f.size)
 
+    def test_isdir(self):
+        """
+            Test that is_dir() works.
+        """
+
+        self.assertTrue(self.st.is_dir(u'test'))
+        self.assertFalse(self.st.is_dir(u'test/test_é.txt'))
+        self.assertFalse(self.st.is_dir(u'non-existent'))
+
+    def test_mimetype(self):
+        """
+            Test the correctness of mimetype().
+        """
+
+        self.assertEqual('text/plain', self.st.mimetype(u'test/test_é.txt'))
 
 if __name__ == '__main__':
     unittest.main()

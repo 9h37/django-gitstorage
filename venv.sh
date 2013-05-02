@@ -15,13 +15,11 @@ then
 
      echo "-- Installing dependencies in virtual environment..."
      pip install -r requirements.txt || exit 1
-     easy_install pygit2==0.18.0 || exit 1
 else
      echo "-- Activating virtual environment: $vdir..."
      . $vdir/bin/activate || exit 1
 
      echo "-- Updating virtual environment: $vdir..."
      pip install -U -r requirements.txt || exit 1
-     easy_install -U pygit2=0.18.0 || exit 1
 fi
 

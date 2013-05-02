@@ -225,7 +225,7 @@ class GitStorage(Storage):
 
         return diffs
 
-    def diff(self, asha, bsha):
+    def diff(self, asha, bsha, name=None):
         """
             Get diff between two commits.
 
@@ -233,6 +233,8 @@ class GitStorage(Storage):
             :type asha: unicode
             :param bsha: SHA of commit B.
             :type bsha: unicode
+            :param name: File name within the repository.
+            :type name: unicode or None
             :returns: unicode
         """
 
@@ -241,7 +243,25 @@ class GitStorage(Storage):
 
         d = c1.tree.diff(c2.tree)
 
-        return d.patch
+        if name:
+            diff = u''
+
+            # For each patch in the diff
+            for patch in d:
+                # Check if the patch is our file
+                if name == patch.new_file_path:
+                    # Format the patch
+                    for hunk in patch.hunks:
+                        p = u'\n'.join(hunk.lines)
+
+                        # And add the diff to the final diff
+                        diff = u'{0}{1}'.format(diff, p)
+
+            return diff
+
+        # For a global diff, just return the full patch
+        else:
+            return d.patch
 
     def search(self, pattern, exclude=None):
         """
@@ -290,24 +310,22 @@ class GitStorage(Storage):
             :returns: True, False
         """
 
-        try:
-            # Get the TreeEntry associated to name
-            tentry = self.repo.head.tree[name]
+        # Check if the path exists, if not returns default value.
+        if not self.exists(name):
+            return False
 
-            # Convert it to its pygit2 representation
-            obj = tentry.to_object()
+        # Get the TreeEntry associated to name
+        tentry = self.repo.head.tree[name]
 
-            # If it's a Tree, then we can return True
-            if isinstance(obj, Tree):
-                return True
+        # Convert it to its pygit2 representation
+        obj = tentry.to_object()
 
-            # The instance is a Blob, so it's a file, return False
-            else:
-                return False
+        # If it's a Tree, then we can return True
+        if isinstance(obj, Tree):
+            return True
 
-        except KeyError:
-            # A KeyError was catch, so the name is not in the repository.
-            # Return False by default
+        # The instance is a Blob, so it's a file, return False
+        else:
             return False
 
     def mimetype(self, name):
@@ -332,9 +350,19 @@ class GitStorage(Storage):
             import urllib
             import mimetypes
 
-            url = urllib.pathname2url(name)
+            url = urllib.pathname2url(name.encode('utf-8'))
 
             return mimetypes.guess_type(url)[0]
+
+    def walk(self):
+        """
+            Walk through the repository.
+        """
+
+        self.index.read()
+
+        for entry in self.index:
+            yield entry
 
     # Storage API
 
@@ -419,7 +447,20 @@ class GitStorage(Storage):
             :returns: True if the file exists, False if the name is available for a new file.
         """
 
-        return path in self.index
+        # If the head is orphaned (does not point to any commit), returns False
+        # because there is nothing in the repository.
+        if self.repo.head_is_orphaned:
+            return False
+
+        # Try getting the path via the tree
+        try:
+            entry = self.repo.head.tree[path]
+
+            return True
+
+        # If it raises a KeyError, then the path doesn't exist
+        except KeyError:
+            return False
 
     def listdir(self, path=None):
         """
