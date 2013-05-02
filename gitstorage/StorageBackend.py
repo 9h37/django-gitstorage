@@ -310,24 +310,22 @@ class GitStorage(Storage):
             :returns: True, False
         """
 
-        try:
-            # Get the TreeEntry associated to name
-            tentry = self.repo.head.tree[name]
+        # Check if the path exists, if not returns default value.
+        if not self.exists(name):
+            return False
 
-            # Convert it to its pygit2 representation
-            obj = tentry.to_object()
+        # Get the TreeEntry associated to name
+        tentry = self.repo.head.tree[name]
 
-            # If it's a Tree, then we can return True
-            if isinstance(obj, Tree):
-                return True
+        # Convert it to its pygit2 representation
+        obj = tentry.to_object()
 
-            # The instance is a Blob, so it's a file, return False
-            else:
-                return False
+        # If it's a Tree, then we can return True
+        if isinstance(obj, Tree):
+            return True
 
-        except KeyError:
-            # A KeyError was catch, so the name is not in the repository.
-            # Return False by default
+        # The instance is a Blob, so it's a file, return False
+        else:
             return False
 
     def mimetype(self, name):
@@ -448,6 +446,11 @@ class GitStorage(Storage):
             :type param: unicode
             :returns: True if the file exists, False if the name is available for a new file.
         """
+
+        # If the head is orphaned (does not point to any commit), returns False
+        # because there is nothing in the repository.
+        if self.repo.head_is_orphaned:
+            return False
 
         # Try getting the path via the tree
         try:
