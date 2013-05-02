@@ -97,6 +97,12 @@ class TestStats(unittest.TestCase):
         self.assertFalse(self.st.is_dir(u'test/test_é.txt'))
         self.assertFalse(self.st.is_dir(u'non-existent'))
 
+    def test_mimetype(self):
+        """
+            Test the correctness of mimetype().
+        """
+
+        self.assertEqual('text/plain', self.st.mimetype(u'test/test_é.txt'))
 
 if __name__ == '__main__':
     unittest.main()

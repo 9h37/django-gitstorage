@@ -350,7 +350,7 @@ class GitStorage(Storage):
             import urllib
             import mimetypes
 
-            url = urllib.pathname2url(name)
+            url = urllib.pathname2url(name.encode('utf-8'))
 
             return mimetypes.guess_type(url)[0]
 
