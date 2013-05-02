@@ -225,7 +225,7 @@ class GitStorage(Storage):
 
         return diffs
 
-    def diff(self, asha, bsha):
+    def diff(self, asha, bsha, name=None):
         """
             Get diff between two commits.
 
@@ -233,6 +233,8 @@ class GitStorage(Storage):
             :type asha: unicode
             :param bsha: SHA of commit B.
             :type bsha: unicode
+            :param name: File name within the repository.
+            :type name: unicode or None
             :returns: unicode
         """
 
@@ -241,7 +243,25 @@ class GitStorage(Storage):
 
         d = c1.tree.diff(c2.tree)
 
-        return d.patch
+        if name:
+            diff = u''
+
+            # For each patch in the diff
+            for patch in d:
+                # Check if the patch is our file
+                if name == patch.new_file_path:
+                    # Format the patch
+                    for hunk in patch.hunks:
+                        p = u'\n'.join(hunk.lines)
+
+                        # And add the diff to the final diff
+                        diff = u'{0}{1}'.format(diff, p)
+
+            return diff
+
+        # For a global diff, just return the full patch
+        else:
+            return d.patch
 
     def search(self, pattern, exclude=None):
         """
