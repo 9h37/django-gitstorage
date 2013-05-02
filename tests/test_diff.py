@@ -57,7 +57,11 @@ class TestDiff(unittest.TestCase):
         patch = u"""diff --git a/test_é_1.txt b/test_é_1.txt
 new file mode 100644
 index 0000000..ffe3c60
-Binary files /dev/null and b/test_é_1.txt differ
+--- /dev/null
++++ b/test_é_1.txt
+@@ -0,0 +1 @@
++hèhè
+\ No newline at end of file
 """
 
         self.assertEqual(d, patch)
@@ -68,13 +72,13 @@ Binary files /dev/null and b/test_é_1.txt differ
         """
 
         c1meta = {
-            'msg': u'test commit é\n',
+            'msg': u'test commit é',
             'author': u'{0} {1}'.format(self.user.first_name, self.user.last_name),
             'sha': self.commit1.hex
         }
 
         c2meta = {
-            'msg': u'test commit è\n',
+            'msg': u'test commit è',
             'author': u'{0} {1}'.format(self.user.first_name, self.user.last_name),
             'sha': self.commit2.hex,
             'parent_sha': self.commit1.hex

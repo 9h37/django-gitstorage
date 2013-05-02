@@ -13,7 +13,7 @@
 from django.core.files.storage import Storage
 from django.core.files import File
 
-from pygit2 import Repository, init_repository, Signature, GitError
+from pygit2 import Repository, init_repository, Signature, GitError, Tree
 from pygit2 import GIT_STATUS_INDEX_DELETED, GIT_STATUS_INDEX_MODIFIED, GIT_STATUS_INDEX_NEW
 from pygit2 import GIT_STATUS_WT_DELETED, GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_NEW
 from pygit2 import GIT_SORT_TIME
@@ -178,7 +178,7 @@ class GitStorage(Storage):
 
         return commits
 
-    def diffs(self, limit=10):
+    def diffs(self, name=None, limit=10):
         """
             Get diffs between commits.
 
@@ -195,12 +195,14 @@ class GitStorage(Storage):
                     # ...
                 ]}
 
+            :param name: File name within the repository.
+            :type name: unicode or None
             :param limit: Maximal number of diffs to get (default: 10), use a negative number to get all.
             :type limit: int
             :returns: dict
         """
 
-        commits = self.log(limit=limit)
+        commits = self.log(name=name, limit=limit)
 
         diffs = {'diffs': []}
 
@@ -239,7 +241,7 @@ class GitStorage(Storage):
 
         d = c1.tree.diff(c2.tree)
 
-        return d.patch.decode('utf-8')
+        return d.patch
 
     def search(self, pattern, exclude=None):
         """
@@ -278,6 +280,61 @@ class GitStorage(Storage):
                 entries.append(entry)
 
         return entries
+
+    def is_dir(self, name):
+        """
+            Check if name refers to a directory.
+
+            :param name: File name within the repository.
+            :type name: unicode
+            :returns: True, False
+        """
+
+        try:
+            # Get the TreeEntry associated to name
+            tentry = self.repo.head.tree[name]
+
+            # Convert it to its pygit2 representation
+            obj = tentry.to_object()
+
+            # If it's a Tree, then we can return True
+            if isinstance(obj, Tree):
+                return True
+
+            # The instance is a Blob, so it's a file, return False
+            else:
+                return False
+
+        except KeyError:
+            # A KeyError was catch, so the name is not in the repository.
+            # Return False by default
+            return False
+
+    def mimetype(self, name):
+        """
+            Get the mimetype of a file.
+
+            :param name: File name within the repository.
+            :type name: unicode
+            :returns: str
+        """
+
+        # If the file is a directory
+        if self.is_dir(name):
+            return 'inode/directory'
+
+        # Or doesn't exist
+        elif not self.exists(name):
+            return 'unknown'
+
+        # The file exists, check its mimetype
+        else:
+            import urllib
+            import mimetypes
+
+            url = urllib.pathname2url(name)
+
+            return mimetypes.guess_type(url)[0]
 
     # Storage API
 
