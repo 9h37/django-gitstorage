@@ -373,7 +373,7 @@ class GitStorage(Storage):
 
             url = urllib.pathname2url(name.encode('utf-8'))
 
-            return mimetypes.guess_type(url)[0]
+            return mimetypes.guess_type(url)[0] or 'unknown'
 
     def walk(self):
         """
