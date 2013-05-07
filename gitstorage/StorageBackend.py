@@ -153,28 +153,49 @@ class GitStorage(Storage):
                 if limit == 0:
                     break
 
-            return commits
-
         else:
             # For each commits
             for commit in self.repo.walk(self.repo.head.oid, GIT_SORT_TIME):
                 # Check the presence of the file in the tree
-                try:
-                    commit.tree[name]
 
-                    # no error raised, it means the entry exists, so add the
-                    # commit to the list
-                    commits.append(commit)
+                if commit.parents:
+                    # If the commit has parents, check if the file is present
+                    # in the diff
 
-                    limit = limit - 1
+                    diff = commit.tree.diff(commit.parents[0].tree)
 
-                    if limit == 0:
-                        break
+                    for patch in diff:
+                        # If the filename is the patch's filename...
+                        if name.encode('utf-8') == patch.new_file_path:
+                            # ... then we can add the commit to the list
+                            # and leave the loop
 
-                # If the file is not in the tree, then it raises a KeyError,
-                # so, just ignore it.
-                except KeyError:
-                    pass
+                            commits.append(commit)
+
+                            limit = limit - 1
+                            break
+
+                else:
+                    # But if the commit has no parents (root commit)
+                    # Simply check in its tree
+
+                    try:
+                        commit.tree[name]
+
+                        # no error raised, it means the entry exists, so add the
+                        # commit to the list
+                        commits.append(commit)
+
+                        limit = limit - 1
+
+                    # If the file is not in the tree, then it raises a KeyError,
+                    # so, just ignore it.
+                    except KeyError:
+                        pass
+
+                # If the limit is reached, leave the loop
+                if limit == 0:
+                    break
 
         return commits
 
@@ -249,7 +270,7 @@ class GitStorage(Storage):
             # For each patch in the diff
             for patch in d:
                 # Check if the patch is our file
-                if name == patch.new_file_path:
+                if name.encode('utf-8') == patch.new_file_path:
                     # Format the patch
                     for hunk in patch.hunks:
                         p = u'\n'.join(hunk.lines)
@@ -352,7 +373,7 @@ class GitStorage(Storage):
 
             url = urllib.pathname2url(name.encode('utf-8'))
 
-            return mimetypes.guess_type(url)[0]
+            return mimetypes.guess_type(url)[0] or 'unknown'
 
     def walk(self):
         """
