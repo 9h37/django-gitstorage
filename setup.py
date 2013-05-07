@@ -10,4 +10,8 @@ setup(name='GitStorage',
       author_email='david.delassus@9h37.fr',
       url='http://github.com/9h37/django-gitstorage',
       packages=['gitstorage'],
+      install_requires=[
+        'django>=1.5',
+        'pygit2==0.18.0',
+      ],
     )
